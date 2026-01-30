@@ -1,0 +1,40 @@
+#include "App_Protocol.h"
+#include "Protocol.h"
+
+extern uint8_t PNDNT_OUT_Buffer[];
+extern uint8_t ETH_OUT_Buffer[];
+
+extern double EL_Enco_Angle; 
+extern double AZ_Enco_Angle;
+
+extern volatile uint8_t Status_Byte1_in_feedback;
+extern volatile uint8_t Status_Byte2_in_feedback;
+
+void Prepare_fb_string()
+{
+   uint8_t Chksm=0;
+   int n;
+   uint16_t Position;
+   
+   double ELAngle;
+   ETH_OUT_Buffer[0] =  Proto_SOF;//'H';
+   ETH_OUT_Buffer[1] = 0x06;//'e';//
+   ETH_OUT_Buffer[2] = 0xff;//'l';// this is healthy to simulate  //FC_byte_in_feedback;
+   
+   Position = (uint16_t)((AZ_Enco_Angle*0xffff)/359.99);
+   ETH_OUT_Buffer[3] = (uint8_t)(Position>>8);    //0x7f;//'l';// for now SSI encoder
+   ETH_OUT_Buffer[4] = (uint8_t)(Position&0xff);   //0x00;//'0';//  //TODO Dummy value of 0x7f7f AZ feeddback
+   
+//AZ speed set or current?
+   ETH_OUT_Buffer[5] = 0x14; //dummy
+   
+   ETH_OUT_Buffer[6] = Status_Byte1_in_feedback;//0xff; //status1
+   ETH_OUT_Buffer[7] = Status_Byte2_in_feedback;//0xff;//status2
+   ETH_OUT_Buffer[9] = Proto_EOF;//'\r';//
+   
+   for(n=1;n<8;n++)
+        Chksm ^= ETH_OUT_Buffer[n];
+   
+   ETH_OUT_Buffer[8] = Chksm;//'L';//
+      
+}
