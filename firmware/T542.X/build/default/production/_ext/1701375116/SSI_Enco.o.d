@@ -22,7 +22,11 @@ build/default/production/_ext/1701375116/SSI_Enco.o: \
  ../src/config/default/peripheral/uart/plib_uart2.h \
  ../src/config/default/peripheral/spi/spi_master/plib_spi1_master.h \
  ../src/config/default/peripheral/spi/spi_master/plib_spi_master_common.h \
- ../../../BEPL_T/firmware/src/Utils/Utils.h
+ ../src/Para_Calculations.h \
+ ../../../BEPL_T/firmware/src/API/Ampli_functions.h \
+ ../../../BEPL_T/firmware/src/API/Amplifier_Com.h \
+ ../../../BEPL_T/firmware/src/BSP/CAN_Comm.h \
+ ../src/System_Configuration.h ../../../BEPL_T/firmware/src/Utils/Utils.h
 
 ../../../BEPL_T/firmware/src/BSP/SSI_Enco.h:
 
@@ -67,5 +71,15 @@ build/default/production/_ext/1701375116/SSI_Enco.o: \
 ../src/config/default/peripheral/spi/spi_master/plib_spi1_master.h:
 
 ../src/config/default/peripheral/spi/spi_master/plib_spi_master_common.h:
+
+../src/Para_Calculations.h:
+
+../../../BEPL_T/firmware/src/API/Ampli_functions.h:
+
+../../../BEPL_T/firmware/src/API/Amplifier_Com.h:
+
+../../../BEPL_T/firmware/src/BSP/CAN_Comm.h:
+
+../src/System_Configuration.h:
 
 ../../../BEPL_T/firmware/src/Utils/Utils.h:

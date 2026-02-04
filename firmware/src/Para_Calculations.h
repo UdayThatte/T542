@@ -21,12 +21,16 @@ extern "C" {
     
 typedef struct
 {
+    bool IsitGrayCode;
+    int8_t direction;
     uint32_t revBits;
     uint32_t angBits;
     uint32_t gearRatio;
-}EncoderValues_t;
+}EncoderParas_t;
     
     
+#define Max_Spin_speed  20  //+ve negative both ways
+
 //This defined machine dependant Parameters for calculation of Ampl / Enco values
 #define    AZ_motor_rotation_direction  1 //decides normal or Reverse Rotation   
 #define    AZ_GR_motor_to_load    128// 1 or 128.0//128.0
@@ -72,9 +76,10 @@ uint32_t Get_EL_Count_Accl_Deccl(double Accl);
 
 //new structure based
 uint32_t Get_Pos_Count_ForAmp(double difftogo,Ampl_Paras* Paras);
-uint32_t Get_Vel_Count_ForAmp(double Velocity,Ampl_Paras* Paras);
+uint32_t Get_Vel_Count_ForAmp_degSec(double Velocity,Ampl_Paras* Paras);
+uint32_t Get_Vel_Count_ForAmp_RPM(double Velocity,Ampl_Paras* Paras);
 uint32_t Get_Accl_Deccl_Count_Foramp(double Accl,Ampl_Paras* Paras);
-double Encoder_ComputeAbsTableAngle(uint32_t raw,EncoderValues_t* Paras);
+double Encoder_ComputeAbsLoadAngle(uint32_t raw,EncoderParas_t* Paras);
 #ifdef	__cplusplus
 }
 #endif

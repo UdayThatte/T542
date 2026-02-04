@@ -17,6 +17,7 @@
 #ifdef	__cplusplus
 extern "C" {
 #endif
+    
 //Bit definitions for FC Byte in feedback response 
 //for FC_byte_in_feedback
 #define CMD_CHKSMOK_MASK 0x01 //1 chksm OK
@@ -26,10 +27,10 @@ extern "C" {
 #define SCU_EMG_STOP_MASK 0x10 //bit 4
 #define PNDNT_EMG_STOP_MASK 0x20 //bit 5
     
-#define MODE_AUTO_MASK 0xC0  // bit 7,6
-#define MODE_MANUAL_MASK 0x80 //
-#define MODE_MAINTAIN_MASK 0x40 //    
-#define MODE_ERROR_MASK 0x00 //        
+#define Fb_MODE_AUTO_MASK 0xC0  // bit 7,6
+#define Fb_MODE_MANUAL_MASK 0x80 //
+#define Fb_MODE_MAINTAIN_MASK 0x40 //    
+#define Fb_MODE_ERROR_MASK 0x00 //        
 //    
 //Bit definitions for StatusByte1 in Feedback string
 #define AZ_ENCODER_OK   0x01

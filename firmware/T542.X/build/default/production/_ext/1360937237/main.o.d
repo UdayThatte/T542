@@ -30,7 +30,9 @@ build/default/production/_ext/1360937237/main.o: ../src/main.c \
  ../../../BEPL_T/firmware/src/Utils/Utils.h \
  ../../../BEPL_T/firmware/src/BSP/KBD_5X8_rd.h \
  ../../../BEPL_T/firmware/src/BSP/Events.h \
- ../../../BEPL_T/firmware/src/API/Protocol.h ../src/App_Protocol.h
+ ../../../BEPL_T/firmware/src/API/Protocol.h ../src/App_Protocol.h \
+ ../../../BEPL_T/firmware/src/BSP/Beeps.h \
+ ../src/config/default/toolchain_specifics.h
 
 ../src/config/default/definitions.h:
 
@@ -99,3 +101,7 @@ build/default/production/_ext/1360937237/main.o: ../src/main.c \
 ../../../BEPL_T/firmware/src/API/Protocol.h:
 
 ../src/App_Protocol.h:
+
+../../../BEPL_T/firmware/src/BSP/Beeps.h:
+
+../src/config/default/toolchain_specifics.h:

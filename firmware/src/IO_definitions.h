@@ -14,31 +14,79 @@ extern "C" {
 
     
 //INPUT definitions    
-#define EXT_EMG_STOP    (INP_IMG & 0x0001)
-#define SCU_EMG_STOP    (INP_IMG & 0x0002)    
-#define UP_LIMIT        (INP_IMG & 0x0004)    
-#define DN_LIMIT        (INP_IMG & 0x0008)
-#define COVER_OPN_LIMIT  (INP_IMG & 0x0010)
-#define COVER_CLS_LIMIT  (INP_IMG & 0x0020)    
-#define AZ_AMPL_OP      (INP_IMG & 0x0040)    
-#define LIFT_AMPL_OP    (INP_IMG & 0x0080)
-#define COVER_AMPL_OP    (INP_IMG & 0x0100)        
-#define PEN_EMG_STOP    (INP_IMG & 0x0200)
-#define COVER_OPN_PB     (INP_IMG & 0x0400)
-#define COVER_CLS_PB     (INP_IMG & 0x0800)    
-#define UP_PB           (INP_IMG & 0x1000)  
-#define DN_PB           (INP_IMG & 0x2000)
-#define PARK_PB         (INP_IMG & 0x4000)
-#define MAINTAIN_PB     (INP_IMG & 0x8000)    
+#define EXT_EMG_MASK    0x0001
+#define EXT_EMG_STOP    (Combined_Inps & EXT_EMG_MASK)
+
+#define SCU_EMG_MASK    0x0002    
+#define SCU_EMG_STOP    (Combined_Inps & SCU_EMG_MASK)    
+
+#define UP_LIMIT_MASK   0x0004    
+#define UP_LIMIT        (Combined_Inps & UP_LIMIT_MASK)    
+    
+#define DN_LIMIT_MASK   0x0008
+#define DN_LIMIT        (Combined_Inps & DN_LIMIT_MASK)
+    
+#define COVER_OPN_LMT_MASK  0x0010
+#define COVER_OPN_LIMIT  (Combined_Inps & COVER_OPN_LMT_MASK)
+    
+#define COVER_CLS_LMT_MASK  0x0020
+#define COVER_CLS_LIMIT  (Combined_Inps & COVER_CLS_LMT_MASK)    
+
+#define AZ_AMP_OP       0x0040
+#define AZ_AMPL_OP      (Combined_Inps & AZ_AMP_OP)    
+    
+#define LIFT_AMPL_MASK    0x0080
+#define LIFT_AMPL_OP    (Combined_Inps & LIFT_AMPL_MASK)
+    
+#define COVER_AMPL_MASK 0x0100    
+#define COVER_AMPL_OP    (Combined_Inps & COVER_AMPL_MASK)        
+    
+#define PEN_EMG_MASK    0x0200    
+#define PEN_EMG_STOP    (Combined_Inps & PEN_EMG_MASK)
+    
+#define COVER_OPN_PB_MASK  0x0400    
+#define COVER_OPN_PB     (Combined_Inps & COVER_OPN_PB_MASK)
+    
+#define COVER_CLS_PB_MASK  0x0800
+#define COVER_CLS_PB     (Combined_Inps & COVER_CLS_PB_MASK)    
+    
+#define UP_PB_MASK      0x1000
+#define UP_PB           (Combined_Inps & UP_PB_MASK)  
+    
+#define DN_PB_MASK      0x2000    
+#define DN_PB           (Combined_Inps & DN_PB_MASK)
+    
+#define PARK_PB_MASK    0x4000    
+#define PARK_PB         (Combined_Inps & PARK_PB_MASK)
+    
+#define MAINTAIN_PB_MASK 0x8000    
+#define MAINTAIN_PB     (Combined_Inps & MAINTAIN_PB_MASK)    
+    
+
 //On RL Lines
-#define MODE_SW_AUTO    (INP_IMG1 & 0x01)
-#define MODE_SW_MAN     (INP_IMG1 & 0x02)
-#define MODE_SW_MAINTAIN (INP_IMG1 & 0x04)
-#define AZ_STOW_LOCK    (INP_IMG1 & 0x08)    
-#define LIFT_STOW_LOCK  (INP_IMG1 & 0x10)
-#define MAINTAIN_LIMIT  (INP_IMG1 & 0x20)
-#define LVL_INTERLOCK   (INP_IMG1 & 0x40)    
-#define AZ_PROXIMITY_SW (INP_IMG1 & 0x80)        
+#define MODE_AUTO_MASK   0x10000     
+#define MODE_SW_AUTO    (Combined_Inps & MODE_AUTO_MASK)
+    
+#define MODE_MAN_MASK   0x20000    
+#define MODE_SW_MAN     (Combined_Inps & MODE_MAN_MASK)
+    
+#define MODE_MAINTAIN_MASK 0x40000
+#define MODE_SW_MAINTAIN (Combined_Inps & MODE_MAINTAIN_MASK)
+    
+#define AZ_STOW_MASK    0x80000    
+#define AZ_STOW_LOCK    (Combined_Inps & AZ_STOW_MASK)    
+    
+#define LIFT_STOW_MASK  0x100000
+#define LIFT_STOW_LOCK  (Combined_Inps & LIFT_STOW_MASK)
+    
+#define MAINTAIN_LMT_MASK 0x200000
+#define MAINTAIN_LIMIT  (Combined_Inps & MAINTAIN_LMT_MASK)
+
+#define LVL_INTERLOCK_MASK 0x400000
+#define LVL_INTERLOCK   (Combined_Inps & LVL_INTERLOCK_MASK)    
+
+#define AZ_PROX_MASK    0x800000    
+#define AZ_PROXIMITY_SW (Combined_Inps & AZ_PROX_MASK)        
 
 //OUTPUT Definitions OP1..OP7
 #define COVER_OPEN_LED_ON   (OUT_IMG | 0x01)

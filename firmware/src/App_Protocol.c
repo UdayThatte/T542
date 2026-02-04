@@ -9,6 +9,7 @@ extern double AZ_Enco_Angle;
 
 extern volatile uint8_t Status_Byte1_in_feedback;
 extern volatile uint8_t Status_Byte2_in_feedback;
+extern int8_t AZ_Spin_Speed_Set;
 
 void Prepare_fb_string()
 {
@@ -26,7 +27,7 @@ void Prepare_fb_string()
    ETH_OUT_Buffer[4] = (uint8_t)(Position&0xff);   //0x00;//'0';//  //TODO Dummy value of 0x7f7f AZ feeddback
    
 //AZ speed set or current?
-   ETH_OUT_Buffer[5] = 0x14; //dummy
+   ETH_OUT_Buffer[5] = AZ_Spin_Speed_Set;//0x14; //dummy
    
    ETH_OUT_Buffer[6] = Status_Byte1_in_feedback;//0xff; //status1
    ETH_OUT_Buffer[7] = Status_Byte2_in_feedback;//0xff;//status2
