@@ -44,6 +44,9 @@
 // *****************************************************************************
 // *****************************************************************************
 //following are from BSP/API
+bool Check_If_Cmd_Para_Received(Protocol_Info* ProtoPtr,uint8_t* Cmd,uint8_t* Param);
+bool Check_Critical_Start_Condition_non_blocking();
+
 extern volatile bool Start_ETH_fb ;
 extern bool System_Booted ;
 extern volatile CAN_APP_STATES CAN_state;
@@ -66,6 +69,7 @@ extern volatile uint8_t TINP_IMG1; //for extended Inputs through RL lines when k
 extern volatile uint16_t INP_IMG;
 extern volatile uint8_t INP_IMG1;
 
+extern volatile uint8_t BRK_IMG;
 extern volatile uint8_t OUT_IMG;
 extern uint8_t FC_byte_in_feedback;
 extern volatile uint8_t Status_Byte1_in_feedback ;
@@ -77,7 +81,9 @@ extern int8_t AZ_Spin_Speed_Set;
 extern uint8_t AZ_Posi_Speed_Set;
 extern bool SSI_encode_Fault;
 
-volatile int MyTimer=0;
+#define  ONE_SEC 100 //Mytime is base which is incremented every 10msec
+
+volatile uint32_t MyTimer=0;
 
 void UserTimer10mSec()
 {
@@ -111,9 +117,19 @@ void UserTimer10mSec()
      else
          Status_Byte2_in_feedback &= ~((uint8_t)ANTENNA_DN_FLG);      
     
+    if(Combined_Inps & AZ_STOW_MASK)
+         Status_Byte2_in_feedback |= (uint8_t)AZ_STOW_LOCK;
+     else
+         Status_Byte2_in_feedback &= ~((uint8_t)AZ_STOW_LOCK);      
+        
+    if(Combined_Inps & LIFT_STOW_MASK)
+         Status_Byte2_in_feedback |= (uint8_t)LIFT_STOW_LOCK;
+     else
+         Status_Byte2_in_feedback &= ~((uint8_t)LIFT_STOW_LOCK);      
+    
 }
 //
-void Move_Motor(uint8_t AmplNode,double ToGo,bool IsRelative,bool IsBlocking)
+void Move_Pedestal(double ToGo,bool IsRelative,bool IsBlocking)
 {
     AmplComm_Status stat;
     bool Reached;
@@ -122,16 +138,19 @@ void Move_Motor(uint8_t AmplNode,double ToGo,bool IsRelative,bool IsBlocking)
     uint32_t CountForAmp;
     double MotAngle;
     int32_t Position;
+    uint8_t Cmd,Para;
+    
+    if(!(FC_byte_in_feedback & (uint8_t)Readiness_MASK))
+        return; //some condition not met
     
     //CountForAmp = Get_Count_ForAmpAZ(ToGo);
-    CountForAmp = Get_Pos_Count_ForAmp(ToGo,&AZ_Amp_Paras);
-
-    stat = Set_Operating_Mode(AmplNode,Ampl_POSITION_Mode) ;
+    stat = Set_Operating_Mode(AZ_Amplifier,Ampl_POSITION_Mode) ;
     CountForAmp =  Get_Vel_Count_ForAmp_RPM((double)AZ_Posi_Speed_Set,&AZ_Amp_Paras);
-    stat = Set_Target_Acceleration_Count(AmplNode,CountForAmp);
+    stat = Set_Target_Velocity_Count(AZ_Amplifier,CountForAmp);
     //LCDWriteString(0,3,1,"Ampl Target is Set  ");
-
-    stat = Set_Target_Position_Count(AmplNode,CountForAmp,IsRelative) ;//ffff is one revolution
+    
+    CountForAmp = Get_Pos_Count_ForAmp(ToGo,&AZ_Amp_Paras);
+    stat = Set_Target_Position_Count(AZ_Amplifier,CountForAmp,IsRelative) ;//ffff is one revolution
     if(stat != AMPL_STATE_OK)
     {
         printf("\rTarget Position Set returned %04X\r",stat);
@@ -139,26 +158,26 @@ void Move_Motor(uint8_t AmplNode,double ToGo,bool IsRelative,bool IsBlocking)
         return;
     }
     //LCDWriteString(0,3,1,"Ampl Target is Set  ");
-    
-    stat = Issue_GO_Command(AmplNode,true);
+    AZ_BRK_RELEASE;
+    stat = Issue_GO_Command(AZ_Amplifier,true);
     if(stat != AMPL_STATE_OK)
     {
         printf("\rGO Command returned %04X\r",stat);
         printf("\rValue received - %04X\r",AmplStatus);
+        AZ_BRK_APPLY;
         return;
     }
     //LCDWriteString(0,3,1,"Ampl GO Comm.Issued.");
     
-
-    
+    Reached = false;
     if(IsBlocking)
     {
         //till target is reached
-        Reached = false;
+        
         do
         {
-            
-            stat = Check_if_Target_Reached(AmplNode,&Reached);
+            Reached = false;
+            stat = Check_if_Target_Reached(AZ_Amplifier,&Reached);
             if(stat!= AMPL_STATE_OK)
             {
                 printf("\rTarget Reached Checking returned %04X\r",stat);
@@ -174,16 +193,67 @@ void Move_Motor(uint8_t AmplNode,double ToGo,bool IsRelative,bool IsBlocking)
             sprintf(dispstr,"AZ Mot:%8.2f",MotAngle);//angle
             //sprintf(dispstr,"%8.2f %08X",MotAngle,Position);//angle
             LCDWriteString(0,2,1,dispstr);
+//here check for STOP command 
+            if(Check_If_Cmd_Para_Received(&ETH_Proto_Ptrs,&Cmd,&Para))
+            {
+                if(Cmd==0x07) //stop command
+                {
+                    Issue_Quick_Stop(AZ_Amplifier);
+                    Enable_Amplifier(AZ_Amplifier);
+                    Reached = true;
+                }
+                    
+            }
+            if(! Check_Critical_Start_Condition_non_blocking())
+                {
+                    Issue_Quick_Stop(AZ_Amplifier);
+                    Enable_Amplifier(AZ_Amplifier);
+                    Reached = true;
+                }
 
           //printf("\rMoving..");
         }while(!Reached);
         
+        AZ_BRK_APPLY;    
     }
+    
     
     //LCDWriteString(0,3,1,"Ampl TARGET Reached.");
     
 }
 
+//used to check if any command and parameter is received while some operation is being pefformed
+bool Check_If_Cmd_Para_Received(Protocol_Info* ProtoPtr,uint8_t* Cmd,uint8_t* Param)
+{
+          if (ProtoPtr->Protocol_State == PROTO_FRAME_RCVD) 
+            {
+            
+                Protocol_Chk(ProtoPtr);  
+           
+                if(ProtoPtr->Protocol_State == PROTO_CHKSM_ERROR) //FC byte to be updated
+                    FC_byte_in_feedback &= ~CMD_CHKSMOK_MASK;
+                else
+                    FC_byte_in_feedback |=  CMD_CHKSMOK_MASK;
+                
+           
+                if  (ProtoPtr->Protocol_State==PROTO_CMD_RCVD)
+                    {
+                     //get and return cmd and para
+                         *Cmd = *(ProtoPtr->BufferFor_DataRcv+2);
+                         *Param = *(ProtoPtr->BufferFor_DataRcv+3);
+                         return true;
+                    }
+                     else
+                     {
+                        printf("\rProto Returned %d",ETH_Proto_Ptrs.Protocol_State) ; 
+                        Restart_Proto(&ETH_Proto_Ptrs);
+                        return false;
+                     }
+           } //protocol prcessing done
+          
+          return false; //no command 
+
+}
 
 void Process_Proto_Cmd(Protocol_Info* ProtoPtr)
 {
@@ -239,36 +309,62 @@ int32_t Target,CrntPos;
             }
             break;
         case 0x03:
-            stat = Set_Target_Velocity_Count(AZ_Amplifier,0); //if it is moving it will stop
-            do
+            //if its running 
+//                Set_Target_Velocity_Count(AZ_Amplifier,0); //if running then will halt
+//                do
+//                {
+//                    Get_ActualSpeed_Count_of_Motor(AZ_Amplifier,&VelCnt);  
+//                }while(VelCnt);
+//                AZ_BRK_APPLY;
+                if(Is_Motor_Moving(AZ_Amplifier))                
+                {
+                    Issue_Halt(AZ_Amplifier);
+                    Set_Operating_Mode(AZ_Amplifier,Ampl_POSITION_Mode) ; //if its in vel mode//make sure
+                    Enable_Amplifier(AZ_Amplifier);
+                    AZ_BRK_APPLY;
+                }
+//            
+//TODO check if Lifted and Door Open
+            if((!UP_LIMIT) && (!COVER_OPN_LIMIT)) //both active low
             {
-             Get_ActualSpeed_Count_of_Motor(AZ_Amplifier,&VelCnt);   
-            }while(VelCnt);
-                
-            
-            
-            Req_AZ_Position = ((((*(ProtoPtr->BufferFor_DataRcv+3))*256)+(*(ProtoPtr->BufferFor_DataRcv+4))) * 359.99 )/65535 ;//in Degrees
-      
-//Get motor Current position in terms of Table Angle          
-            Get_Actual_Motor_Position(AZ_Amplifier,&Position);
-  //find out degrees on the table          
-            CrntAzPosMotor = (double)Position/65535; //in revolution 
-            
-            CrntAzPosMotor = fmod(CrntAzPosMotor,AZ_Amp_Paras.GR_motor_to_load);//remainder of revs
+                Req_AZ_Position = ((((*(ProtoPtr->BufferFor_DataRcv+3))*256)+(*(ProtoPtr->BufferFor_DataRcv+4))) * 359.99 )/65535 ;//in Degrees
 
-            CrntAzPosMotor *= 360; //current angle on table   
-            
-            CrntAzPosMotor /= AZ_Amp_Paras.GR_motor_to_load;
-            
-   //find shortest path to rotate         
-            Req_AZ_Position = fmod(Req_AZ_Position-CrntAzPosMotor + 180.0,360.0);
-            if(Req_AZ_Position < 0)
-                Req_AZ_Position += 360.0;
-            Req_AZ_Position -= 180;
+    //Get motor Current position in terms of Table Angle          
+                Get_Actual_Motor_Position(AZ_Amplifier,&Position);
+      //find out degrees on the table          
+                CrntAzPosMotor = (double)Position/65535; //in revolution 
 
-            
-            Move_Motor(AZ_Amplifier,Req_AZ_Position,true,true);//relative
-            
+                CrntAzPosMotor = fmod(CrntAzPosMotor,AZ_Amp_Paras.GR_motor_to_load);//remainder of revs
+
+                CrntAzPosMotor *= 360; //current angle on table   
+
+                CrntAzPosMotor /= AZ_Amp_Paras.GR_motor_to_load;
+
+       //find shortest path to rotate         
+                Req_AZ_Position = fmod(Req_AZ_Position-CrntAzPosMotor + 180.0,360.0);
+                if(Req_AZ_Position < 0)
+                    Req_AZ_Position += 360.0;
+                Req_AZ_Position -= 180;
+
+                Move_Pedestal(Req_AZ_Position,true,true);//relative
+
+            }
+            else
+            {
+                if(UP_LIMIT)
+                {
+                    LCDWriteString(0,4,1,"NOT IN UP POSITION  ");
+                    LongBeep();
+                    delay_mS(2000);
+                }
+                if(COVER_OPN_LIMIT)
+                {
+                    LCDWriteString(0,4,1,"COVER NOT OPEN.     ");
+                    LongBeep();
+                    delay_mS(2000);
+                }
+               LCDWriteString(0,4,1,"                    ");     
+            }
             break;
         case 0x04: //spin with set speed
             FC_byte_in_feedback |= CMD_RCVD_MASK;
@@ -276,33 +372,85 @@ int32_t Target,CrntPos;
             Req_Speed = *(ProtoPtr->BufferFor_DataRcv+3);
             if((Req_Speed <= 20) && (Req_Speed >= -20))
             {
-              AZ_Spin_Speed_Set = Req_Speed; //set on the amplifier inrpm 
-              stat = Set_Operating_Mode(AZ_Amplifier,Ampl_VELOCITY_Mode) ;
-              VelCnt = Get_Vel_Count_ForAmp_RPM((double)(AZ_Spin_Speed_Set),&AZ_Amp_Paras);
-                stat |= Set_Target_Velocity_Count(AZ_Amplifier,VelCnt);
-                 //if(stat != AMPL_STATE_OK) 
-                 //{
-                 //}
+                  if(FC_byte_in_feedback & (uint8_t)Readiness_MASK)
+                  {
+                    AZ_Spin_Speed_Set = Req_Speed; //set on the amplifier inrpm 
+                    AZ_BRK_RELEASE;
+                    stat = Set_Operating_Mode(AZ_Amplifier,Ampl_VELOCITY_Mode) ;
+                    VelCnt = Get_Vel_Count_ForAmp_RPM((double)(AZ_Spin_Speed_Set),&AZ_Amp_Paras);
+                    stat |= Set_Target_Velocity_Count(AZ_Amplifier,VelCnt);
+                  }
             }
-             
             break;
-        case 0x05:
-        case 0x07: //stop
-                stat = Set_Target_Velocity_Count(AZ_Amplifier,0);
-                do
+        case 0x06: //park
+                if(Is_Motor_Moving(AZ_Amplifier))                
                 {
-                 Get_ActualSpeed_Count_of_Motor(AZ_Amplifier,&VelCnt);   
-                }while(VelCnt);
+                    Issue_Halt(AZ_Amplifier);
+                    Set_Operating_Mode(AZ_Amplifier,Ampl_POSITION_Mode) ; //if its in vel mode//make sure
+                    Enable_Amplifier(AZ_Amplifier);
+                    AZ_BRK_APPLY;
+                }
+            if((!UP_LIMIT) && (!COVER_OPN_LIMIT)) //both active low
+            {
+                Req_AZ_Position = 90.0 ;//in Degrees
+
+    //Get motor Current position in terms of Table Angle          
+                Get_Actual_Motor_Position(AZ_Amplifier,&Position);
+      //find out degrees on the table          
+                CrntAzPosMotor = (double)Position/65535; //in revolution 
+
+                CrntAzPosMotor = fmod(CrntAzPosMotor,AZ_Amp_Paras.GR_motor_to_load);//remainder of revs
+
+                CrntAzPosMotor *= 360; //current angle on table   
+
+                CrntAzPosMotor /= AZ_Amp_Paras.GR_motor_to_load;
+
+       //find shortest path to rotate         
+                Req_AZ_Position = fmod(Req_AZ_Position-CrntAzPosMotor + 180.0,360.0);
+                if(Req_AZ_Position < 0)
+                    Req_AZ_Position += 360.0;
+                Req_AZ_Position -= 180;
+
+                Move_Pedestal(Req_AZ_Position,true,true);//relative
+                
+            }
+            else
+            {
+                if(UP_LIMIT)
+                {
+                    LCDWriteString(0,4,1,"NOT IN UP POSITION  ");
+                    LongBeep();
+                    delay_mS(2000);
+                }
+                if(COVER_OPN_LIMIT)
+                {
+                    LCDWriteString(0,4,1,"COVER NOT OPEN.     ");
+                    LongBeep();
+                    delay_mS(2000);
+                }
+               LCDWriteString(0,4,1,"                    ");     
+            }
+
+            
+            break;
+        case 0x05: //standby
+        case 0x07: //stop applicable if its rotating
+                stat = Set_Target_Velocity_Count(AZ_Amplifier,0);
+                
+                while(Is_Motor_Moving(AZ_Amplifier))
+                {
+                    ;
+                }
                 
                 stat = Set_Operating_Mode(AZ_Amplifier,Ampl_POSITION_Mode) ;
+                
+                AZ_BRK_APPLY;
                 break;
         case 0x08: //AZ Postion Velocity
             FC_byte_in_feedback |= CMD_RCVD_MASK;
             AZ_Posi_Speed_Set = *(ProtoPtr->BufferFor_DataRcv+3) ;
             break;
-        case 0x09: //EL
-            FC_byte_in_feedback |= CMD_RCVD_MASK;
-            break;
+
         default: //unrecog command
             FC_byte_in_feedback &= ~CMD_RCVD_MASK;
             break;
@@ -311,12 +459,6 @@ int32_t Target,CrntPos;
    Restart_Proto(ProtoPtr);
 }
 
-void Check_Encoder_Update_Status()
-{
-//TODO For SSI Encoder
-    Status_Byte1_in_feedback |= (uint8_t)AZ_ENCODER_OK;
- 
-}
 
 void Check_Amplifiers_And_Update_Status()
 {
@@ -488,9 +630,11 @@ void Update_Mode()
   if(CurrentMode == MODE_ERR)
     OUT_IMG = ERROR_LED_ON;
 }
-
-void Check_Initial_Start_Condition_non_blocking()
+//true - if all ok
+//false - prob
+bool  Check_Critical_Start_Condition_non_blocking()
 {
+    bool retval = true;
 uint32_t condimask = EXT_EMG_MASK | SCU_EMG_MASK |  AZ_STOW_MASK | LIFT_STOW_MASK | LVL_INTERLOCK_MASK;
 
     //LCDWriteString(0,3,1,"CAN NOT START..     ");    
@@ -509,10 +653,16 @@ uint32_t condimask = EXT_EMG_MASK | SCU_EMG_MASK |  AZ_STOW_MASK | LIFT_STOW_MAS
         {
             ShortBeep();      
             delay_mS(500);       
+            retval = false;
+            FC_byte_in_feedback &= ~(uint8_t)Readiness_MASK;
         }
+        else
+            FC_byte_in_feedback |= (uint8_t)Readiness_MASK;
+        
     
     //LCDWriteString(0,3,1,"                    ");  
     LCDWriteString(0,4,1,"                    ");  
+    return retval;
 }
 
 void Check_Initial_Start_Condition()
@@ -637,6 +787,9 @@ double Angle;
 
 void Actions_Manual_Mode()
 {
+    uint32_t Enco;
+    char disp_str[32];
+    
 LCDWriteString(0,1,1,"MAN. MODE    ");    
 //check the amp status and selectively disable the amp
     if(Status_Byte1_in_feedback & AZ_AMPL_OK)
@@ -650,6 +803,39 @@ LCDWriteString(0,1,1,"MAN. MODE    ");
     do
     {
         Update_Mode();
+//Encoder Reading for Feedback
+//                    Enco = Get_SSI_Encoder_Count(0,&AZ_Encoder_Data);
+//                    if(SSI_encode_Fault)
+//                    {
+//                        printf("\rAZ Encoder Reading Error In Auto %08X",Enco);
+//                        Status_Byte1_in_feedback &= ~(uint8_t)AZ_ENCODER_OK;
+//                        LongBeep();
+//                    }
+//                    else
+//                    {
+//                       AZ_Enco_Angle = Encoder_ComputeAbsLoadAngle(Enco,&AZ_Encoder_Data);
+//                       AZ_Enco_Position = Enco; //
+//                       //printf("\rAZ Encoder Reading In Auto %08X",Enco);
+//                       Status_Byte1_in_feedback |= (uint8_t)AZ_ENCODER_OK;
+//                    }
+        
+                    Get_Enco_Count_CAN(AZ_Encode_Node,&Enco);
+                    if(CAN_state == STATE_CAN_IDLE)
+                    {
+                       AZ_Enco_Angle = Encoder_ComputeAbsLoadAngle(Enco,&AZ_Encoder_Data);
+                       AZ_Enco_Position = Enco; //
+                       Status_Byte1_in_feedback |= (uint8_t)AZ_ENCODER_OK;
+                       sprintf(disp_str,"AZ Enc:%7.3f",AZ_Enco_Angle);
+                       LCDWriteString(0,3,1,disp_str);
+                    }
+                    else
+                    {
+                        printf("\rAZ Encoder Reading Error In Man");
+                        LCDWriteString(0,4,1,"  CAN ENCO ERROR    ");
+                        Status_Byte1_in_feedback &= ~(uint8_t)AZ_ENCODER_OK;
+                        LongBeep();
+                    }
+        
         delay_mS(100);
     }while(CurrentMode == MANUAL_MODE);
 //if mode is switched enable the amps    
@@ -676,13 +862,39 @@ void Actions_Auto_Mode()
     int32_t Position;
     char dispstr[32];
     double MotAngle;
+    uint32_t VelCnt;
     
     LCDWriteString(0,1,1,"AUTO MODE   ");
     do
     {
         //Now check power on status
-        Check_Initial_Start_Condition_non_blocking();
+        if(!Check_Critical_Start_Condition_non_blocking())
+        { //if AZ motor is moving in spin mode
+            if(Is_Motor_Moving(AZ_Amplifier)) //if running
+                {
+                    Set_Target_Velocity_Count(AZ_Amplifier,0);
+                    Issue_Quick_Stop(AZ_Amplifier);
+                    Enable_Amplifier(AZ_Amplifier);
+                    AZ_BRK_APPLY;
+                }
+        }
+        
 //Encoder Reading for Feedback
+//                    Enco = Get_SSI_Encoder_Count(0,&AZ_Encoder_Data);
+//                    if(SSI_encode_Fault)
+//                    {
+//                        printf("\rAZ Encoder Reading Error In Auto %08X",Enco);
+//                        Status_Byte1_in_feedback &= ~(uint8_t)AZ_ENCODER_OK;
+//                        LongBeep();
+//                    }
+//                    else
+//                    {
+//                       AZ_Enco_Angle = Encoder_ComputeAbsLoadAngle(Enco,&AZ_Encoder_Data);
+//                       AZ_Enco_Position = Enco; //
+//                       //printf("\rAZ Encoder Reading In Auto %08X",Enco);
+//                       Status_Byte1_in_feedback |= (uint8_t)AZ_ENCODER_OK;
+//                    }
+        
                     Get_Enco_Count_CAN(AZ_Encode_Node,&Enco);
                     if(CAN_state == STATE_CAN_IDLE)
                     {
@@ -709,23 +921,9 @@ void Actions_Auto_Mode()
                     //sprintf(dispstr,"%8.2f %08X",MotAngle,Position);//angle
                     LCDWriteString(0,2,1,dispstr);
         
-                    if(((AZ_Enco_Angle<0.01) || (AZ_Enco_Angle>359.9)) && (MotAngle > 0.2 ))
+                    if(((AZ_Enco_Angle<0.01) || (AZ_Enco_Angle>359.9)) && ((MotAngle > 0.2 )||(MotAngle < -0.2)) )
                         Set_Motor_Home_Position(AZ_Amplifier);
                     
-//                    Enco = Get_SSI_Encoder_Count(0,&AZ_Encoder_Data);
-//                    if(SSI_encode_Fault)
-//                    {
-//                        printf("\rAZ Encoder Reading Error In Auto %08X",Enco);
-//                        Status_Byte1_in_feedback &= ~(uint8_t)AZ_ENCODER_OK;
-//                        LongBeep();
-//                    }
-//                    else
-//                    {
-//                       AZ_Enco_Angle = Encoder_ComputeAbsLoadAngle(Enco,&AZ_Encoder_Data);
-//                       AZ_Enco_Position = Enco; //
-//                       //printf("\rAZ Encoder Reading In Auto %08X",Enco);
-//                       Status_Byte1_in_feedback |= (uint8_t)AZ_ENCODER_OK;
-//                    }
         
 //Process Protocol        
 
