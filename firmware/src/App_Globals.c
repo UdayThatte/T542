@@ -27,26 +27,26 @@ volatile uint32_t Combined_Inps=0;
 //uint16_t  AZ_Enco_GR = 5; //should be integer only
 
 //for CAN
-//EncoderParas_t AZ_Encoder_Data = 
-//{
-//    .IsitGrayCode = false,
-//    .direction = 1,
-//    .revBits = 12,
-//    .angBits = 12,
-//    .gearRatio = 5
-//
-//};
-
-
-//for SSI
 EncoderParas_t AZ_Encoder_Data = 
 {
     .IsitGrayCode = false,
     .direction = 1,
     .revBits = 12,
-    .angBits = 16,
+    .angBits = 12,
     .gearRatio = 5
+
 };
+
+
+//for SSI MT
+//EncoderParas_t AZ_Encoder_Data = 
+//{
+//    .IsitGrayCode = false,
+//    .direction = 1,
+//    .revBits = 12,
+//    .angBits = 16,
+//    .gearRatio = 5
+//};
 
 
 Ampl_Paras AZ_Amp_Paras = 

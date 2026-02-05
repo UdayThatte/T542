@@ -8,10 +8,27 @@
 #ifndef IO_DEFINITIONS_H
 #define	IO_DEFINITIONS_H
 
+#include "config/default/peripheral/gpio/plib_gpio.h"
+
+
 #ifdef	__cplusplus
 extern "C" {
 #endif
-
+//Brakes
+#define   AZ_BRK_RELEASE        BRK_IMG |= 0x01; \
+                                BRAKE1_Set();
+#define   AZ_BRK_APPLY          BRK_IMG &= 0xFE; \
+                                BRAKE1_Clear();
+    
+#define     LIFT_BRK_RELEASE    BRK_IMG |= 0x02; \
+                                BRAKE2_Set();
+#define     LIFT_BRK_APPLY      BRK_IMG &= 0xFD; \
+                                BRAKE2_Clear();
+    
+#define     DOOR_BRK_RELEASE    BRK_IMG |= 0x04; \
+                                BRAKE3_Set();
+#define     DOOR_BRK_APPLY      BRK_IMG &= 0xFB; \
+                                BRAKE3_Clear();
     
 //INPUT definitions    
 #define EXT_EMG_MASK    0x0001

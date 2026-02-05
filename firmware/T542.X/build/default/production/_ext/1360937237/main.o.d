@@ -20,7 +20,9 @@ build/default/production/_ext/1360937237/main.o: ../src/main.c \
  ../src/config/default/peripheral/uart/plib_uart2.h \
  ../src/config/default/peripheral/spi/spi_master/plib_spi1_master.h \
  ../src/config/default/peripheral/spi/spi_master/plib_spi_master_common.h \
- ../src/IO_definitions.h ../src/Para_Calculations.h \
+ ../src/IO_definitions.h \
+ ../src/config/default/peripheral/gpio/plib_gpio.h \
+ ../src/Para_Calculations.h \
  ../../../BEPL_T/firmware/src/API/Ampli_functions.h \
  ../../../BEPL_T/firmware/src/API/Amplifier_Com.h \
  ../../../BEPL_T/firmware/src/BSP/CAN_Comm.h \
@@ -77,6 +79,8 @@ build/default/production/_ext/1360937237/main.o: ../src/main.c \
 ../src/config/default/peripheral/spi/spi_master/plib_spi_master_common.h:
 
 ../src/IO_definitions.h:
+
+../src/config/default/peripheral/gpio/plib_gpio.h:
 
 ../src/Para_Calculations.h:
 

@@ -3,22 +3,24 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/C:/Users/UT/HarmonyProjects/T542/firmware/src/main.c</file>
-            <file>file:/C:/Users/UT/HarmonyProjects/T542/firmware/src/System_Configuration.h</file>
+            <file>file:/C:/Users/UT/HarmonyProjects/BEPL_T/firmware/src/BSP/SSI_Enco.c</file>
             <file>file:/C:/Users/UT/HarmonyProjects/T542/firmware/src/App_Protocol.c</file>
-            <file>file:/C:/Users/UT/HarmonyProjects/T542/firmware/src/Para_Calculations.h</file>
-            <file>file:/C:/Users/UT/HarmonyProjects/T542/firmware/src/App_Globals.c</file>
             <file>file:/C:/Users/UT/HarmonyProjects/T542/firmware/T542.X/nbproject/Makefile-default.mk</file>
-            <file>file:/C:/Users/UT/HarmonyProjects/T542/firmware/src/App_Protocol.h</file>
-            <file>file:/C:/Users/UT/HarmonyProjects/T542/firmware/src/IO_definitions.h</file>
             <file>file:/C:/Users/UT/HarmonyProjects/BEPL_T/firmware/src/API/Amplifier_Com.c</file>
+            <file>file:/C:/Users/UT/HarmonyProjects/BEPL_T/firmware/src/Utils/Utils.c</file>
+            <file>file:/C:/Users/UT/HarmonyProjects/BEPL_T/firmware/src/API/Global_Vars.c</file>
+            <file>file:/C:/Users/UT/HarmonyProjects/T542/firmware/src/main.c</file>
+            <file>file:/C:/Users/UT/HarmonyProjects/T542/firmware/src/App_Globals.c</file>
+            <file>file:/C:/Users/UT/HarmonyProjects/BEPL_T/firmware/src/BSP/SSI_Enco.h</file>
+            <file>file:/C:/Users/UT/HarmonyProjects/T542/firmware/src/IO_definitions.h</file>
+            <file>file:/C:/Users/UT/HarmonyProjects/BEPL_T/firmware/src/BSP/CAN_Enco_Com.h</file>
+            <file>file:/C:/Users/UT/HarmonyProjects/T542/firmware/src/System_Configuration.h</file>
+            <file>file:/C:/Users/UT/HarmonyProjects/T542/firmware/src/Para_Calculations.h</file>
             <file>file:/C:/Users/UT/HarmonyProjects/BEPL_T/firmware/src/API/Amplifier_Com.h</file>
             <file>file:/C:/Users/UT/HarmonyProjects/BEPL_T/firmware/src/API/Ampli_functions.c</file>
             <file>file:/C:/Users/UT/HarmonyProjects/BEPL_T/firmware/src/API/Para_Calculations.c</file>
-            <file>file:/C:/Users/UT/HarmonyProjects/BEPL_T/firmware/src/BSP/SSI_Enco.h</file>
-            <file>file:/C:/Users/UT/HarmonyProjects/BEPL_T/firmware/src/BSP/SSI_Enco.c</file>
-            <file>file:/C:/Users/UT/HarmonyProjects/BEPL_T/firmware/src/API/Global_Vars.c</file>
-            <file>file:/C:/Users/UT/HarmonyProjects/BEPL_T/firmware/src/Utils/Utils.c</file>
+            <file>file:/C:/Users/UT/HarmonyProjects/BEPL_T/firmware/src/API/Ampli_functions.h</file>
+            <file>file:/C:/Users/UT/HarmonyProjects/T542/firmware/src/App_Protocol.h</file>
         </group>
     </open-files>
 </project-private>

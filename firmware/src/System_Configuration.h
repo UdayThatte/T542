@@ -27,12 +27,13 @@ extern "C" {
 #define MODE_ERR 3
     
 //define the Amplifier nodes here (Offset)
-//for This system one more node CAN_Node_Amp2 is spare (not used)    
+//
 //For all routines This constant is to be used    
-#define     AZ_Amplifier     CAN_Node_Amp0 //60B
+#define     AZ_Amplifier     CAN_Node_Amp0 //60B //TODO 601,602,603
 #define     LIFT_Amplifier   CAN_Node_Amp1
-#define     COVER_Amplifier   CAN_Node_Amp2
+#define     COVER_Amplifier  CAN_Node_Amp2
 
+    
 #define  AZ_Encode_Node CAN_Node_Encoder0
 
 
