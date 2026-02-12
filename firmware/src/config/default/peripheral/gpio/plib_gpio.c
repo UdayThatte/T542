@@ -76,8 +76,8 @@ void GPIO_Initialize ( void )
     TRISDCLR = 0x1e00; /* Direction Control */
 
     /* PORTE Initialization */
-    LATE = 0x8f; /* Initial Latch Value */
-    TRISECLR = 0x1af; /* Direction Control */
+    LATE = 0x9f; /* Initial Latch Value */
+    TRISECLR = 0x1bf; /* Direction Control */
 
     /* PORTF Initialization */
     LATF = 0x8; /* Initial Latch Value */

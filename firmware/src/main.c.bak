@@ -89,7 +89,7 @@ void UserTimer10mSec()
 {
     uint8_t tmp;
     if(!System_Booted) return; //No operation untill System Booted/Initialized
-   
+    
     MyTimer++;
     //only upper 5 inputs are complemented bec of Isolator on ext board
     //lower three inputs are directly connected
@@ -160,8 +160,7 @@ bool Move_Pedestal(double ToGo,bool IsRelative,bool IsBlocking)
     //CountForAmp = Get_Count_ForAmpAZ(ToGo);
     stat = Set_Operating_Mode(AZ_Amplifier,Ampl_POSITION_Mode) ;
     CountForAmp =  Get_Vel_Count_ForAmp_RPM((double)AZ_Posi_Speed_Set,&AZ_Amp_Paras);
-    
-    stat = Set_Target_Velocity_Count_Posi(AZ_Amplifier,CountForAmp);
+    stat = Set_Target_Velocity_Count(AZ_Amplifier,CountForAmp);
     //LCDWriteString(0,3,1,"Ampl Target is Set  ");
     
     CountForAmp = Get_Pos_Count_ForAmp(ToGo,&AZ_Amp_Paras);
@@ -211,55 +210,35 @@ bool Move_Pedestal(double ToGo,bool IsRelative,bool IsBlocking)
 //            sprintf(dispstr,"AZ Mot:%8.2f",MotAngle);//angle
 //            //sprintf(dispstr,"%8.2f %08X",MotAngle,Position);//angle
 //            LCDWriteString(0,2,1,dispstr);
-            delay_mS(20);
-                    Enco = Get_SSI_Encoder_Count(0,&AZ_Encoder_Data);
-                    if(SSI_encode_Fault)
-                    {
-                        printf("\rAZ Encoder Reading Error In Auto %08X",Enco);
-                        Status_Byte1_in_feedback &= ~(uint8_t)AZ_ENCODER_OK;
-                        //LongBeep();
-                    }
-                    else
+            
+                    Get_Enco_Count_CAN(AZ_Encode_Node,&Enco);
+                    if(CAN_state == STATE_CAN_IDLE)
                     {
                        AZ_Enco_Angle = Encoder_ComputeAbsLoadAngle(Enco,&AZ_Encoder_Data);
                        AZ_Enco_Position = Enco; //
-                       //printf("\rAZ Encoder Reading In Auto %08X",Enco);
                        Status_Byte1_in_feedback |= (uint8_t)AZ_ENCODER_OK;
                        sprintf(dispstr,"AZ Enc:%7.3f",AZ_Enco_Angle);
-                      LCDWriteString(0,3,1,dispstr);
-                       
+                       LCDWriteString(0,3,1,dispstr);
                     }
-            
-//                    Get_Enco_Count_CAN(AZ_Encode_Node,&Enco);
-//                    if(CAN_state == STATE_CAN_IDLE)
-//                    {
-//                       AZ_Enco_Angle = Encoder_ComputeAbsLoadAngle(Enco,&AZ_Encoder_Data);
-//                       AZ_Enco_Position = Enco; //
-//                       Status_Byte1_in_feedback |= (uint8_t)AZ_ENCODER_OK;
-//                       sprintf(dispstr,"AZ Enc:%7.3f",AZ_Enco_Angle);
-//                       LCDWriteString(0,3,1,dispstr);
-//                    }
-//                    else
-//                    {
-//                        printf("\rAZ Encoder Reading Error In Man");
-//                        LCDWriteString(0,4,1,"  CAN ENCO ERROR    ");
-//                        FC_byte_in_feedback &= ~(uint8_t)Readiness_MASK; 
-//                        
-//                        Status_Byte1_in_feedback &= ~(uint8_t)AZ_ENCODER_OK;
-//                        LongBeep();
-//                        return false;
-//                    }
+                    else
+                    {
+                        printf("\rAZ Encoder Reading Error In Man");
+                        LCDWriteString(0,4,1,"  CAN ENCO ERROR    ");
+                        FC_byte_in_feedback &= ~(uint8_t)Readiness_MASK; 
+                        
+                        Status_Byte1_in_feedback &= ~(uint8_t)AZ_ENCODER_OK;
+                        LongBeep();
+                        return false;
+                    }
         
             
 //here check for STOP command 
             if(Check_If_Cmd_Para_Received(&ETH_Proto_Ptrs,&Cmd,&Para))
             {
-                Restart_Proto(&ETH_Proto_Ptrs); //prepare for next cmd
                 if(Cmd==0x07) //stop command
                 {
-                    Set_Target_Velocity_Count_Posi(AZ_Amplifier,0);
-                    Issue_Halt(AZ_Amplifier);
-                    //Enable_Amplifier(AZ_Amplifier);
+                    Issue_Quick_Stop(AZ_Amplifier);
+                    Enable_Amplifier(AZ_Amplifier);
                     //Reached = true;
                     return false;
                 }
@@ -267,10 +246,8 @@ bool Move_Pedestal(double ToGo,bool IsRelative,bool IsBlocking)
             }
             if(! Check_Critical_Start_Condition_non_blocking())
                 {
-                
-                    Set_Target_Velocity_Count_Posi(AZ_Amplifier,0);
-                    Issue_Halt(AZ_Amplifier);
-                    //Enable_Amplifier(AZ_Amplifier);
+                    Issue_Quick_Stop(AZ_Amplifier);
+                    Enable_Amplifier(AZ_Amplifier);
                     //Reached = true;
                     return false;
                 }
@@ -338,7 +315,7 @@ void Move_Cover_Motor(bool IsOpen,uint32_t Timeout) //Timeout in secs
     else    
         CountForAmp =  Get_Vel_Count_ForAmp_RPM((Cover_Amp_Paras.default_Velocity * -1),&Cover_Amp_Paras);
         
-    stat = Set_Target_Velocity_Count_Velocity(COVER_Amplifier,CountForAmp);
+    stat = Set_Target_Velocity_Count(COVER_Amplifier,CountForAmp);
     stat = Set_Operating_Mode(COVER_Amplifier,Ampl_VELOCITY_Mode) ;
     
     if(IsOpen)
@@ -357,11 +334,9 @@ void Move_Cover_Motor(bool IsOpen,uint32_t Timeout) //Timeout in secs
         
         if((MyTimer > (Timeout * ONE_SEC)) || (!targetLimit))
         {
-            Set_Target_Velocity_Count_Velocity(COVER_Amplifier,0);
-            Issue_Halt(COVER_Amplifier);
-            
-            //Set_Operating_Mode(COVER_Amplifier,Ampl_POSITION_Mode) ; //if its in vel mode//make sure
-            //Enable_Amplifier(COVER_Amplifier);
+            Issue_Quick_Stop(COVER_Amplifier);
+            Set_Operating_Mode(COVER_Amplifier,Ampl_POSITION_Mode) ; //if its in vel mode//make sure
+            Enable_Amplifier(COVER_Amplifier);
             DOOR_BRK_APPLY;
             if(IsOpen)
                 Status_Byte2_in_feedback &= ~(uint8_t)DOOR_OPENING_FLG;
@@ -373,13 +348,11 @@ void Move_Cover_Motor(bool IsOpen,uint32_t Timeout) //Timeout in secs
         }
         if(Check_If_Cmd_Para_Received(&ETH_Proto_Ptrs,&Cmd,&Para))
             {
-                Restart_Proto(&ETH_Proto_Ptrs); //prepare for next cmd
                 if((Cmd==0x02)&&(Para == 0x00)) //command for lifting
                 {
-                    Set_Target_Velocity_Count_Velocity(COVER_Amplifier,0);
-                    Issue_Halt(COVER_Amplifier);
-                    //Set_Operating_Mode(COVER_Amplifier,Ampl_POSITION_Mode) ; //if its in vel mode//make sure
-                    //Enable_Amplifier(COVER_Amplifier);
+                    Issue_Quick_Stop(COVER_Amplifier);
+                    Set_Operating_Mode(COVER_Amplifier,Ampl_POSITION_Mode) ; //if its in vel mode//make sure
+                    Enable_Amplifier(COVER_Amplifier);
                     Reached = true;
                     DOOR_BRK_APPLY;
                     if(IsOpen)
@@ -394,10 +367,9 @@ void Move_Cover_Motor(bool IsOpen,uint32_t Timeout) //Timeout in secs
         
          if(! Check_Critical_Start_Condition_non_blocking())
          {
-             Set_Target_Velocity_Count_Velocity(COVER_Amplifier,0);
-            Issue_Halt(COVER_Amplifier);
-            //Set_Operating_Mode(COVER_Amplifier,Ampl_POSITION_Mode) ; //if its in vel mode//make sure
-            //Enable_Amplifier(COVER_Amplifier);
+            Issue_Quick_Stop(COVER_Amplifier);
+            Set_Operating_Mode(COVER_Amplifier,Ampl_POSITION_Mode) ; //if its in vel mode//make sure
+            Enable_Amplifier(COVER_Amplifier);
             Reached = true;
             DOOR_BRK_APPLY;
             if(IsOpen)
@@ -432,7 +404,7 @@ void Move_Lift_Motor(bool IsUp,uint32_t Timeout) //Timeout in secs
     else    
         CountForAmp =  Get_Vel_Count_ForAmp_RPM((Lift_Amp_Paras.default_Velocity * -1),&Lift_Amp_Paras);
         
-    stat = Set_Target_Velocity_Count_Velocity(LIFT_Amplifier,CountForAmp);
+    stat = Set_Target_Velocity_Count(LIFT_Amplifier,CountForAmp);
     stat = Set_Operating_Mode(LIFT_Amplifier,Ampl_VELOCITY_Mode) ;
     if(IsUp)
           Status_Byte2_in_feedback |= (uint8_t)ANTENNA_LIFTING_FLG;
@@ -450,10 +422,9 @@ void Move_Lift_Motor(bool IsUp,uint32_t Timeout) //Timeout in secs
         
         if((MyTimer > (Timeout * ONE_SEC)) || (!targetLimit))
         {
-            Set_Target_Velocity_Count_Velocity(LIFT_Amplifier,0);
-            Issue_Halt(LIFT_Amplifier);
-            //Set_Operating_Mode(LIFT_Amplifier,Ampl_POSITION_Mode) ; //if its in vel mode//make sure
-            //Enable_Amplifier(LIFT_Amplifier);
+            Issue_Quick_Stop(LIFT_Amplifier);
+            Set_Operating_Mode(LIFT_Amplifier,Ampl_POSITION_Mode) ; //if its in vel mode//make sure
+            Enable_Amplifier(LIFT_Amplifier);
             LIFT_BRK_APPLY;
             if(IsUp)
                 Status_Byte2_in_feedback &= ~(uint8_t)ANTENNA_LIFTING_FLG;
@@ -465,13 +436,11 @@ void Move_Lift_Motor(bool IsUp,uint32_t Timeout) //Timeout in secs
         }
         if(Check_If_Cmd_Para_Received(&ETH_Proto_Ptrs,&Cmd,&Para))
             {
-                Restart_Proto(&ETH_Proto_Ptrs); //may receive command
                 if((Cmd==0x02)&&(Para == 0x00)) //command for lifting
                 {
-                    Set_Target_Velocity_Count_Velocity(LIFT_Amplifier,0);
-                    Issue_Halt(LIFT_Amplifier);
-                    //Set_Operating_Mode(LIFT_Amplifier,Ampl_POSITION_Mode) ; //if its in vel mode//make sure
-                    //Enable_Amplifier(LIFT_Amplifier);
+                    Issue_Quick_Stop(LIFT_Amplifier);
+                    Set_Operating_Mode(LIFT_Amplifier,Ampl_POSITION_Mode) ; //if its in vel mode//make sure
+                    Enable_Amplifier(LIFT_Amplifier);
                     Reached = true;
                     LIFT_BRK_APPLY;
                     if(IsUp)
@@ -485,10 +454,9 @@ void Move_Lift_Motor(bool IsUp,uint32_t Timeout) //Timeout in secs
             }
          if(! Check_Critical_Start_Condition_non_blocking())
          {
-             Set_Target_Velocity_Count_Velocity(LIFT_Amplifier,0);
-            Issue_Halt(LIFT_Amplifier);
-            //Set_Operating_Mode(LIFT_Amplifier,Ampl_POSITION_Mode) ; //if its in vel mode//make sure
-            //Enable_Amplifier(LIFT_Amplifier);
+            Issue_Quick_Stop(LIFT_Amplifier);
+            Set_Operating_Mode(LIFT_Amplifier,Ampl_POSITION_Mode) ; //if its in vel mode//make sure
+            Enable_Amplifier(LIFT_Amplifier);
             Reached = true;
             LIFT_BRK_APPLY;
             if(IsUp)
@@ -531,10 +499,10 @@ int TryCount = 0;
             tmp = *(ProtoPtr->BufferFor_DataRcv+3); //command open close stop
             switch(tmp)
             {
-                case 0x0A: //open
+                case 0xA0: //UP
                         if(COVER_OPN_LIMIT) //if limit not hit then only run
                         {//TODO Check home position of AZ
-                            if((AZ_Enco_Angle > AZ_Position_Positive_Error)||(AZ_Enco_Angle < AZ_Position_Negative_Error))
+                            if((AZ_Enco_Angle > 0.05)||(AZ_Enco_Angle < -0.05))
                             {
                                 LCDWriteString(0,4,1,"PEDESTAL NOT IN HOME");
                                 LongBeep();
@@ -557,10 +525,10 @@ int TryCount = 0;
                         }
                         
                     break;
-                case 0xA0://close
+                case 0x0A://DOWN
                         if(COVER_CLS_LIMIT) //if limit not hit then only run
                         {//Check home position of AZ
-                            if((AZ_Enco_Angle > AZ_Position_Positive_Error)||(AZ_Enco_Angle < AZ_Position_Negative_Error))
+                            if((AZ_Enco_Angle > 0.05)||(AZ_Enco_Angle < -0.05))
                             {
                                 LCDWriteString(0,4,1,"PEDESTAL NOT IN HOME");
                                 LongBeep();
@@ -596,10 +564,10 @@ int TryCount = 0;
             tmp = *(ProtoPtr->BufferFor_DataRcv+3); //command open close stop
             switch(tmp)
             {
-                case 0x0A: //UP
+                case 0xA0: //UP
                         if(UP_LIMIT) //if limit not hit then only run
                         {//TODO Check home position of AZ
-                            if((AZ_Enco_Angle > AZ_Position_Positive_Error)||(AZ_Enco_Angle <AZ_Position_Negative_Error ))
+                            if((AZ_Enco_Angle > 0.05)||(AZ_Enco_Angle < -0.05))
                             {
                                 LCDWriteString(0,4,1,"PEDESTAL NOT IN HOME");
                                 LongBeep();
@@ -622,10 +590,10 @@ int TryCount = 0;
                         }
                         
                     break;
-                case 0xA0://DOWN
+                case 0x0A://DOWN
                         if(DN_LIMIT) //if limit not hit then only run
                         {//Check home position of AZ
-                            if((AZ_Enco_Angle > AZ_Position_Positive_Error)||(AZ_Enco_Angle < AZ_Position_Negative_Error))
+                            if((AZ_Enco_Angle > 0.05)||(AZ_Enco_Angle < -0.05))
                             {
                                 LCDWriteString(0,4,1,"PEDESTAL NOT IN HOME");
                                 LongBeep();
@@ -655,34 +623,21 @@ int TryCount = 0;
                     break;
             }
             break;
-        case 0x03://take position
+        case 0x03:
+            //if its running 
+//                Set_Target_Velocity_Count(AZ_Amplifier,0); //if running then will halt
+//                do
+//                {
+//                    Get_ActualSpeed_Count_of_Motor(AZ_Amplifier,&VelCnt);  
+//                }while(VelCnt);
+//                AZ_BRK_APPLY;
                 if(Is_Motor_Moving(AZ_Amplifier))                
                 {
-                    Set_Target_Velocity_Count_Velocity(AZ_Amplifier,0);
-                    Set_Target_Velocity_Count_Posi(AZ_Amplifier,0);
                     Issue_Halt(AZ_Amplifier);
                     Set_Operating_Mode(AZ_Amplifier,Ampl_POSITION_Mode) ; //if its in vel mode//make sure
                     Enable_Amplifier(AZ_Amplifier);
                     AZ_BRK_APPLY;
                 }
-                    Enco = Get_SSI_Encoder_Count(0,&AZ_Encoder_Data);
-                    if(SSI_encode_Fault)
-                    {
-                        printf("\rAZ Encoder Reading Error In processing Posi command  %08X",Enco);
-                        Status_Byte1_in_feedback &= ~(uint8_t)AZ_ENCODER_OK;
-                        //LongBeep();
-                    }
-                    else
-                    {
-                       AZ_Enco_Angle = Encoder_ComputeAbsLoadAngle(Enco,&AZ_Encoder_Data);
-                       AZ_Enco_Position = Enco; //
-                       //printf("\rAZ Encoder Reading In Auto %08X",Enco);
-                       Status_Byte1_in_feedback |= (uint8_t)AZ_ENCODER_OK;
-//                       sprintf(dispstr,"AZ Enc:%7.3f",AZ_Enco_Angle);
-//                      LCDWriteString(0,3,1,dispstr);
-                       
-                    }
-                
 //            
 //check if Lifted and Door Open
             if((!UP_LIMIT) && (!COVER_OPN_LIMIT)) //both active low
@@ -707,10 +662,6 @@ int TryCount = 0;
                         if(PosiToGo < 0)
                             PosiToGo += 360.0;
                         PosiToGo -= 180;
-                        
-//                    sprintf(dispstr,"%7.2f",PosiToGo);
-//                    LCDWriteString(0,2,1,dispstr);
-                        
                         if(!Move_Pedestal(PosiToGo,true,true))//relative
                         {
                             LCDWriteString(0,4,1,"Move Aborted..      ");
@@ -719,55 +670,34 @@ int TryCount = 0;
                            
                         }
 
-                    delay_mS(20);        
-                    Enco = Get_SSI_Encoder_Count(0,&AZ_Encoder_Data);
-                    if(SSI_encode_Fault)
-                    {
-                        printf("\rAZ Encoder Reading Error In Auto %08X",Enco);
-                        Status_Byte1_in_feedback &= ~(uint8_t)AZ_ENCODER_OK;
-                        //LongBeep();
-                    }
-                    else
+                    Get_Enco_Count_CAN(AZ_Encode_Node,&Enco);
+                    if(CAN_state == STATE_CAN_IDLE)
                     {
                        AZ_Enco_Angle = Encoder_ComputeAbsLoadAngle(Enco,&AZ_Encoder_Data);
                        AZ_Enco_Position = Enco; //
-                       //printf("\rAZ Encoder Reading In Auto %08X",Enco);
                        Status_Byte1_in_feedback |= (uint8_t)AZ_ENCODER_OK;
-                       sprintf(dispstr,"AZ Enc:%7.3f",AZ_Enco_Angle);
-                      LCDWriteString(0,3,1,dispstr);
-                       
+//                       sprintf(disp_str,"AZ Enc:%7.3f",AZ_Enco_Angle);
+//                       LCDWriteString(0,3,1,disp_str);
                     }
-
-//                    Get_Enco_Count_CAN(AZ_Encode_Node,&Enco);
-//                    if(CAN_state == STATE_CAN_IDLE)
-//                    {
-//                       AZ_Enco_Angle = Encoder_ComputeAbsLoadAngle(Enco,&AZ_Encoder_Data);
-//                       AZ_Enco_Position = Enco; //
-//                       Status_Byte1_in_feedback |= (uint8_t)AZ_ENCODER_OK;
-////                       sprintf(disp_str,"AZ Enc:%7.3f",AZ_Enco_Angle);
-////                       LCDWriteString(0,3,1,disp_str);
-//                    }
-//                    else
-//                    {
-//                        printf("\rAZ Encoder Reading Error In Move Pedestal");
-//                        LCDWriteString(0,4,1,"  CAN ENCO ERROR    ");
-//                        Status_Byte1_in_feedback &= ~(uint8_t)AZ_ENCODER_OK;
-//                        LongBeep();
-//                        
-//                    }
+                    else
+                    {
+                        printf("\rAZ Encoder Reading Error In Move Pedestal");
+                        LCDWriteString(0,4,1,"  CAN ENCO ERROR    ");
+                        Status_Byte1_in_feedback &= ~(uint8_t)AZ_ENCODER_OK;
+                        LongBeep();
+                        
+                    }
 //                    sprintf(dispstr,"%7.2f %7.2f",Req_AZ_Position,AZ_Enco_Angle);
 //                    LCDWriteString(0,1,1,dispstr);
                     TryCount++;
-                    if(TryCount>2)//if failed to achieve the requested position
+                    if(TryCount>3)//if failed to achieve the requested position
                     {
                       LCDWriteString(0,4,1,"FAILED TO REACH POSI");  
                       LongBeep();
                       Req_AZ_Position = AZ_Enco_Angle; //to manipulate while())
                     }
-//                    sprintf(dispstr,"%7.2f %7.2f",Req_AZ_Position,AZ_Enco_Angle);
-//                    LCDWriteString(0,1,1,dispstr);
                     
-                 }while(fabs(AZ_Enco_Angle-Req_AZ_Position) > AZ_Position_Positive_Error );
+                 }while(fabs(AZ_Enco_Angle-Req_AZ_Position) > 0.05 );
 
             }
             else
@@ -791,14 +721,14 @@ int TryCount = 0;
             FC_byte_in_feedback |= CMD_RCVD_MASK;
             //check if its within limit 
             Req_Speed = *(ProtoPtr->BufferFor_DataRcv+3);
-            if((Req_Speed <= AZ_Amp_Paras.Max_Velocity) && (Req_Speed >= (-1* AZ_Amp_Paras.Max_Velocity) ))
+            if((Req_Speed <= 20) && (Req_Speed >= -20))
             {
                   if(FC_byte_in_feedback & (uint8_t)Readiness_MASK)
                   {
                     AZ_Spin_Speed_Set = Req_Speed; //set on the amplifier inrpm 
                     AZ_BRK_RELEASE;
                     VelCnt = Get_Vel_Count_ForAmp_RPM((double)(AZ_Spin_Speed_Set),&AZ_Amp_Paras);
-                    stat = Set_Target_Velocity_Count_Velocity(AZ_Amplifier,VelCnt);
+                    stat = Set_Target_Velocity_Count(AZ_Amplifier,VelCnt);
                     stat |= Set_Operating_Mode(AZ_Amplifier,Ampl_VELOCITY_Mode) ;
                   }
             }
@@ -806,33 +736,11 @@ int TryCount = 0;
         case 0x06: //park
                 if(Is_Motor_Moving(AZ_Amplifier))                
                 {
-                    Set_Target_Velocity_Count_Posi(AZ_Amplifier,0);
-                    Set_Target_Velocity_Count_Velocity(AZ_Amplifier,0);
                     Issue_Halt(AZ_Amplifier);
                     Set_Operating_Mode(AZ_Amplifier,Ampl_POSITION_Mode) ; //if its in vel mode//make sure
                     Enable_Amplifier(AZ_Amplifier);
                     AZ_BRK_APPLY;
                 }
-                //update position
-                    Enco = Get_SSI_Encoder_Count(0,&AZ_Encoder_Data);
-                    if(SSI_encode_Fault)
-                    {
-                        printf("\rAZ Encoder Reading Error In processing Posi command  %08X",Enco);
-                        Status_Byte1_in_feedback &= ~(uint8_t)AZ_ENCODER_OK;
-                        //LongBeep();
-                    }
-                    else
-                    {
-                       AZ_Enco_Angle = Encoder_ComputeAbsLoadAngle(Enco,&AZ_Encoder_Data);
-                       AZ_Enco_Position = Enco; //
-                       //printf("\rAZ Encoder Reading In Auto %08X",Enco);
-                       Status_Byte1_in_feedback |= (uint8_t)AZ_ENCODER_OK;
-//                       sprintf(dispstr,"AZ Enc:%7.3f",AZ_Enco_Angle);
-//                      LCDWriteString(0,3,1,dispstr);
-                       
-                    }
-
-                
             if((!UP_LIMIT) && (!COVER_OPN_LIMIT)) //both active low
             {
                 Req_AZ_Position = 90.0 ;//in Degrees
@@ -862,53 +770,35 @@ int TryCount = 0;
                             Req_AZ_Position = AZ_Enco_Angle; //to manipulate while())
                            
                         }
-                        delay_mS(20);
-                    Enco = Get_SSI_Encoder_Count(0,&AZ_Encoder_Data);
-                    if(SSI_encode_Fault)
-                    {
-                        printf("\rAZ Encoder Reading Error In Auto %08X",Enco);
-                        Status_Byte1_in_feedback &= ~(uint8_t)AZ_ENCODER_OK;
-                        LongBeep();
-                    }
-                    else
+
+                    Get_Enco_Count_CAN(AZ_Encode_Node,&Enco);
+                    if(CAN_state == STATE_CAN_IDLE)
                     {
                        AZ_Enco_Angle = Encoder_ComputeAbsLoadAngle(Enco,&AZ_Encoder_Data);
                        AZ_Enco_Position = Enco; //
-                       //printf("\rAZ Encoder Reading In Auto %08X",Enco);
                        Status_Byte1_in_feedback |= (uint8_t)AZ_ENCODER_OK;
-                       sprintf(dispstr,"AZ Enc:%7.3f",AZ_Enco_Angle);
-                      LCDWriteString(0,3,1,dispstr);
-                       
+//                       sprintf(disp_str,"AZ Enc:%7.3f",AZ_Enco_Angle);
+//                       LCDWriteString(0,3,1,disp_str);
                     }
-
-//                    Get_Enco_Count_CAN(AZ_Encode_Node,&Enco);
-//                    if(CAN_state == STATE_CAN_IDLE)
-//                    {
-//                       AZ_Enco_Angle = Encoder_ComputeAbsLoadAngle(Enco,&AZ_Encoder_Data);
-//                       AZ_Enco_Position = Enco; //
-//                       Status_Byte1_in_feedback |= (uint8_t)AZ_ENCODER_OK;
-////                       sprintf(disp_str,"AZ Enc:%7.3f",AZ_Enco_Angle);
-////                       LCDWriteString(0,3,1,disp_str);
-//                    }
-//                    else
-//                    {
-//                        printf("\rAZ Encoder Reading Error In Move Pedestal");
-//                        LCDWriteString(0,4,1,"  CAN ENCO ERROR    ");
-//                        Status_Byte1_in_feedback &= ~(uint8_t)AZ_ENCODER_OK;
-//                        LongBeep();
-//                        
-//                    }
+                    else
+                    {
+                        printf("\rAZ Encoder Reading Error In Move Pedestal");
+                        LCDWriteString(0,4,1,"  CAN ENCO ERROR    ");
+                        Status_Byte1_in_feedback &= ~(uint8_t)AZ_ENCODER_OK;
+                        LongBeep();
+                        
+                    }
 //                    sprintf(dispstr,"%7.2f %7.2f",Req_AZ_Position,AZ_Enco_Angle);
 //                    LCDWriteString(0,1,1,dispstr);
                     TryCount++;
-                    if(TryCount>2)//if failed to achieve the requested position
+                    if(TryCount>3)//if failed to achieve the requested position
                     {
                       LCDWriteString(0,4,1,"FAILED TO REACH POSI");  
                       LongBeep();
                       Req_AZ_Position = AZ_Enco_Angle; //to manipulate while())
                     }
                     
-                 }while(fabs(AZ_Enco_Angle-Req_AZ_Position) > AZ_Position_Positive_Error );
+                 }while(fabs(AZ_Enco_Angle-Req_AZ_Position) > 0.05 );
             }
             else
             {
@@ -931,7 +821,7 @@ int TryCount = 0;
             break;
         case 0x05: //standby
         case 0x07: //stop applicable if its rotating
-                stat = Set_Target_Velocity_Count_Velocity(AZ_Amplifier,0);
+                stat = Set_Target_Velocity_Count(AZ_Amplifier,0);
                 
                 while(Is_Motor_Moving(AZ_Amplifier))
                 {
@@ -1280,46 +1170,28 @@ double Angle;
             LCDWriteString(0,4,1,dispstr);
             AZ_Motor_Position = Position;
         }
-                    Enco = Get_SSI_Encoder_Count(0,&AZ_Encoder_Data);
-                    if(SSI_encode_Fault)
+//
+                    Get_Enco_Count_CAN(AZ_Encode_Node,&Enco);
+                    
+                    if(CAN_state == STATE_CAN_IDLE)
                     {
-                        printf("\rAZ Encoder Reading Error In Auto %08X",Enco);
-                        Status_Byte1_in_feedback &= ~(uint8_t)AZ_ENCODER_OK;
-                        LongBeep();
+//                        Get_Paras_12Bit_Encoders(Enco,&Angle,AZ_Enco_GR);
+//                        //sprintf(dispstr,"CAN:x%04X Ang:%6.2f",Enco,Angle);
+//                        //LCDWriteString(0,1,1,dispstr);
+//                        AZ_Enco_Position = Enco; //
+//                        AZ_Enco_Angle = Angle;
+                        AZ_Enco_Angle = Encoder_ComputeAbsLoadAngle(Enco,&AZ_Encoder_Data);
+                        AZ_Enco_Position = Enco; //
+                       delay_mS(20);
                     }
                     else
                     {
-                       AZ_Enco_Angle = Encoder_ComputeAbsLoadAngle(Enco,&AZ_Encoder_Data);
-                       AZ_Enco_Position = Enco; //
-                       //printf("\rAZ Encoder Reading In Auto %08X",Enco);
-                       Status_Byte1_in_feedback |= (uint8_t)AZ_ENCODER_OK;
-                       sprintf(dispstr,"AZ Enc:%7.3f",AZ_Enco_Angle);
-                      LCDWriteString(0,3,1,dispstr);
-                       
+                        LCDWriteString(0,1,1,"  CAN ENCO ERROR    ");
+                        LongBeep();
                     }
-        
-//
-//                    Get_Enco_Count_CAN(AZ_Encode_Node,&Enco);
-                    
-//                    if(CAN_state == STATE_CAN_IDLE)
-//                    {
-////                        Get_Paras_12Bit_Encoders(Enco,&Angle,AZ_Enco_GR);
-////                        //sprintf(dispstr,"CAN:x%04X Ang:%6.2f",Enco,Angle);
-////                        //LCDWriteString(0,1,1,dispstr);
-////                        AZ_Enco_Position = Enco; //
-////                        AZ_Enco_Angle = Angle;
-//                        AZ_Enco_Angle = Encoder_ComputeAbsLoadAngle(Enco,&AZ_Encoder_Data);
-//                        AZ_Enco_Position = Enco; //
-//                       delay_mS(20);
-//                    }
-//                    else
-//                    {
-//                        LCDWriteString(0,1,1,"  CAN ENCO ERROR    ");
-//                        LongBeep();
-//                    }
-//                    //sprintf(dispstr,"%5.2f",Angle);
-//                    sprintf(dispstr,"%08X %5.2f",AZ_Enco_Position,AZ_Enco_Angle);
-//                    LCDWriteString(0,2,1,dispstr);
+                    //sprintf(dispstr,"%5.2f",Angle);
+                    sprintf(dispstr,"%08X %5.2f",AZ_Enco_Position,AZ_Enco_Angle);
+                    LCDWriteString(0,2,1,dispstr);
 
     }//main while
 
@@ -1344,39 +1216,37 @@ LCDWriteString(0,1,1,"MAN. MODE    ");
     {
         Update_Mode();
 //Encoder Reading for Feedback
-                    Enco = Get_SSI_Encoder_Count(0,&AZ_Encoder_Data);
-                    if(SSI_encode_Fault)
-                    {
-                        printf("\rAZ Encoder Reading Error In Auto %08X",Enco);
-                        Status_Byte1_in_feedback &= ~(uint8_t)AZ_ENCODER_OK;
-                        LongBeep();
-                    }
-                    else
+//                    Enco = Get_SSI_Encoder_Count(0,&AZ_Encoder_Data);
+//                    if(SSI_encode_Fault)
+//                    {
+//                        printf("\rAZ Encoder Reading Error In Auto %08X",Enco);
+//                        Status_Byte1_in_feedback &= ~(uint8_t)AZ_ENCODER_OK;
+//                        LongBeep();
+//                    }
+//                    else
+//                    {
+//                       AZ_Enco_Angle = Encoder_ComputeAbsLoadAngle(Enco,&AZ_Encoder_Data);
+//                       AZ_Enco_Position = Enco; //
+//                       //printf("\rAZ Encoder Reading In Auto %08X",Enco);
+//                       Status_Byte1_in_feedback |= (uint8_t)AZ_ENCODER_OK;
+//                    }
+        
+                    Get_Enco_Count_CAN(AZ_Encode_Node,&Enco);
+                    if(CAN_state == STATE_CAN_IDLE)
                     {
                        AZ_Enco_Angle = Encoder_ComputeAbsLoadAngle(Enco,&AZ_Encoder_Data);
                        AZ_Enco_Position = Enco; //
-                       //printf("\rAZ Encoder Reading In Auto %08X",Enco);
                        Status_Byte1_in_feedback |= (uint8_t)AZ_ENCODER_OK;
                        sprintf(disp_str,"AZ Enc:%7.3f",AZ_Enco_Angle);
                        LCDWriteString(0,3,1,disp_str);
                     }
-        
-//                    Get_Enco_Count_CAN(AZ_Encode_Node,&Enco);
-//                    if(CAN_state == STATE_CAN_IDLE)
-//                    {
-//                       AZ_Enco_Angle = Encoder_ComputeAbsLoadAngle(Enco,&AZ_Encoder_Data);
-//                       AZ_Enco_Position = Enco; //
-//                       Status_Byte1_in_feedback |= (uint8_t)AZ_ENCODER_OK;
-//                       sprintf(disp_str,"AZ Enc:%7.3f",AZ_Enco_Angle);
-//                       LCDWriteString(0,3,1,disp_str);
-//                    }
-//                    else
-//                    {
-//                        printf("\rAZ Encoder Reading Error In Man");
-//                        LCDWriteString(0,4,1,"  CAN ENCO ERROR    ");
-//                        Status_Byte1_in_feedback &= ~(uint8_t)AZ_ENCODER_OK;
-//                        LongBeep();
-//                    }
+                    else
+                    {
+                        printf("\rAZ Encoder Reading Error In Man");
+                        LCDWriteString(0,4,1,"  CAN ENCO ERROR    ");
+                        Status_Byte1_in_feedback &= ~(uint8_t)AZ_ENCODER_OK;
+                        LongBeep();
+                    }
         
         delay_mS(100);
     }while(CurrentMode == MANUAL_MODE);
@@ -1414,48 +1284,45 @@ void Actions_Auto_Mode()
         { //if AZ motor is moving in spin mode
             if(Is_Motor_Moving(AZ_Amplifier)) //if running
                 {
-                    Set_Target_Velocity_Count_Velocity(AZ_Amplifier,0);
-                    Issue_Halt(AZ_Amplifier);
-                    //Enable_Amplifier(AZ_Amplifier);
+                    Set_Target_Velocity_Count(AZ_Amplifier,0);
+                    Issue_Quick_Stop(AZ_Amplifier);
+                    Enable_Amplifier(AZ_Amplifier);
                     AZ_BRK_APPLY;
                 }
         }
         
 //Encoder Reading for Feedback
-                    Enco = Get_SSI_Encoder_Count(0,&AZ_Encoder_Data);
-                    if(SSI_encode_Fault)
-                    {
-                        printf("\rAZ Encoder Reading Error In Auto %08X",Enco);
-                        Status_Byte1_in_feedback &= ~(uint8_t)AZ_ENCODER_OK;
-                        LongBeep();
-                    }
-                    else
-                    {
-                       AZ_Enco_Angle = Encoder_ComputeAbsLoadAngle(Enco,&AZ_Encoder_Data);
-                       AZ_Enco_Position = Enco; //
-                       //printf("\rAZ Encoder Reading In Auto %08X",Enco);
-                       Status_Byte1_in_feedback |= (uint8_t)AZ_ENCODER_OK;
-                       sprintf(disp_str,"AZ Enc:%7.3f",AZ_Enco_Angle);
-                      LCDWriteString(0,3,1,disp_str);
-                       
-                    }
-        
-//                    Get_Enco_Count_CAN(AZ_Encode_Node,&Enco);
-//                    if(CAN_state == STATE_CAN_IDLE)
+//                    Enco = Get_SSI_Encoder_Count(0,&AZ_Encoder_Data);
+//                    if(SSI_encode_Fault)
 //                    {
-//                       AZ_Enco_Angle = Encoder_ComputeAbsLoadAngle(Enco,&AZ_Encoder_Data);
-//                       AZ_Enco_Position = Enco; //
-//                       Status_Byte1_in_feedback |= (uint8_t)AZ_ENCODER_OK;
-//                       sprintf(disp_str,"AZ Enc:%7.3f",AZ_Enco_Angle);
-//                       LCDWriteString(0,3,1,disp_str);
-//                    }
-//                    else
-//                    {
-//                        printf("\rAZ Encoder Reading Error In Auto");
-//                        LCDWriteString(0,4,1,"  CAN ENCO ERROR    ");
+//                        printf("\rAZ Encoder Reading Error In Auto %08X",Enco);
 //                        Status_Byte1_in_feedback &= ~(uint8_t)AZ_ENCODER_OK;
 //                        LongBeep();
 //                    }
+//                    else
+//                    {
+//                       AZ_Enco_Angle = Encoder_ComputeAbsLoadAngle(Enco,&AZ_Encoder_Data);
+//                       AZ_Enco_Position = Enco; //
+//                       //printf("\rAZ Encoder Reading In Auto %08X",Enco);
+//                       Status_Byte1_in_feedback |= (uint8_t)AZ_ENCODER_OK;
+//                    }
+        
+                    Get_Enco_Count_CAN(AZ_Encode_Node,&Enco);
+                    if(CAN_state == STATE_CAN_IDLE)
+                    {
+                       AZ_Enco_Angle = Encoder_ComputeAbsLoadAngle(Enco,&AZ_Encoder_Data);
+                       AZ_Enco_Position = Enco; //
+                       Status_Byte1_in_feedback |= (uint8_t)AZ_ENCODER_OK;
+                       sprintf(disp_str,"AZ Enc:%7.3f",AZ_Enco_Angle);
+                       LCDWriteString(0,3,1,disp_str);
+                    }
+                    else
+                    {
+                        printf("\rAZ Encoder Reading Error In Auto");
+                        LCDWriteString(0,4,1,"  CAN ENCO ERROR    ");
+                        Status_Byte1_in_feedback &= ~(uint8_t)AZ_ENCODER_OK;
+                        LongBeep();
+                    }
 //For testing only                    
 //                    Get_Actual_Motor_Position(AZ_Amplifier,&Position);
 //                    
@@ -1540,34 +1407,21 @@ void Actions_Maintainance_Mode()
 //       }
 //    }//while
 //}
-void disp_all_inputs()
-{
+extern volatile int ETH_fb_Cntr;
 
- int i;
- char cc;
- char dispstr[32];
- 
-    LCDWriteString(0,3,1,"INP:                ");
-        
-        for (i = 15; i >= 0; i--) 
-        {
-            cc ='0';
-            if ((INP_IMG >> i) & 1) 
-                cc ='1';
-          LCDWritechar(0,3,20-i,cc);
-        }
-    
-    LCDWriteString(0,4,1,"IN :                ");
-        for (i = 7; i >= 0; i--) 
-        {
-            cc ='0';
-            if ((INP_IMG1 >> i) & 1) 
-                cc ='1';
-          LCDWritechar(0,4,20-i,cc);
-        }
+void IntrETH_fb(uint32_t status, uintptr_t context)
+{
+//        ETH_fb_Cntr++;
+//    
+//    if(ETH_fb_Cntr >= ETH_Fb_Time_mSec)
+//    {
+//        ETH_fb_Cntr = 0;
+//        if(Start_ETH_fb)
+//            Send_Response_ETH();
+//    }    
+
     
 }
-
 int main ( void )
 {
 char dispstr[32]  ;    
@@ -1608,12 +1462,7 @@ uint32_t Enco;
     Start_ETH_fb = true; //start sedning fb string
     ClearDisp(0);
     
-//     printf("\rWaiting Autobaud");
-//    //Check baud
-//     UART4_AutoBaudSet(true);
-//     while(UART4_AutoBaudQuery()==true);     
-//     
-//     printf("\rAutobaud done");
+    
     
     
 //    char cc;
@@ -1628,12 +1477,7 @@ uint32_t Enco;
 //          LCDWritechar(0,3,20-i,cc);
 //        }
 //    }
-//   
-//    while(1)
-//    {
-//    disp_all_inputs();    
-//    }
-    
+//    
     Actions_Auto_Mode();
     
     while(1)

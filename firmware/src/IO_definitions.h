@@ -31,8 +31,8 @@ extern "C" {
                                 BRAKE3_Clear();
     
 //INPUT definitions    
-#define EXT_EMG_MASK    0x0001
-#define EXT_EMG_STOP    (Combined_Inps & EXT_EMG_MASK)
+#define MANALOFT_EMG_MASK    0x0001
+#define MANALOFT_EMG_STOP    (Combined_Inps & MANALOFT_EMG_MASK)
 
 #define SCU_EMG_MASK    0x0002    
 #define SCU_EMG_STOP    (Combined_Inps & SCU_EMG_MASK)    

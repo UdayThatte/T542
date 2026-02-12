@@ -95,7 +95,7 @@ void UART4_Initialize( void )
     U4STASET = (_U4STA_UTXEN_MASK | _U4STA_URXEN_MASK | _U4STA_UTXISEL1_MASK );
 
     /* BAUD Rate register Setup */
-    U4BRG = 346;
+    U4BRG = 174;//uday 346;
 
     /* Disable Interrupts */
     IEC2CLR = _IEC2_U4EIE_MASK;

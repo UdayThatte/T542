@@ -23,6 +23,7 @@ void Prepare_fb_string() //~25-30uS due to maths try another method
    ETH_OUT_Buffer[2] = 0xff;//'l';// this is healthy to simulate  //FC_byte_in_feedback;
    
    Position = (uint16_t)((AZ_Enco_Angle*0xffff)/359.99);
+   
    ETH_OUT_Buffer[3] = (uint8_t)(Position>>8);    //0x7f;//'l';// for now SSI encoder
    ETH_OUT_Buffer[4] = (uint8_t)(Position&0xff);   //0x00;//'0';//  //TODO Dummy value of 0x7f7f AZ feeddback
    

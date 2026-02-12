@@ -23,7 +23,7 @@ extern "C" {
 #define CMD_CHKSMOK_MASK 0x01 //1 chksm OK
 #define CMD_RCVD_MASK  0x02 //1 valid cmd rcvd
 #define Readiness_MASK 0x04 //
-    //TODO bit 3 Man-Aloft Switch
+#define Man_Aloft_Sw_MASK    0x08
 #define SCU_EMG_STOP_MASK 0x10 //bit 4
 #define PNDNT_EMG_STOP_MASK 0x20 //bit 5
     
