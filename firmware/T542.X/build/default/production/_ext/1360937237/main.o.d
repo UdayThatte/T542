@@ -22,13 +22,12 @@ build/default/production/_ext/1360937237/main.o: ../src/main.c \
  ../src/config/default/peripheral/spi/spi_master/plib_spi_master_common.h \
  ../src/IO_definitions.h \
  ../src/config/default/peripheral/gpio/plib_gpio.h \
- ../src/Para_Calculations.h \
+ ../../../BEPL_T/firmware/src/API/Para_Calculations.h \
  ../../../BEPL_T/firmware/src/API/Ampli_functions.h \
  ../../../BEPL_T/firmware/src/API/Amplifier_Com.h \
  ../../../BEPL_T/firmware/src/BSP/CAN_Comm.h \
  ../src/System_Configuration.h \
  ../../../BEPL_T/firmware/src/API/LCD_functions.h \
- ../../../BEPL_T/firmware/src/BSP/Enco_Handling.h \
  ../../../BEPL_T/firmware/src/Utils/Utils.h \
  ../../../BEPL_T/firmware/src/BSP/KBD_5X8_rd.h \
  ../../../BEPL_T/firmware/src/BSP/Events.h \
@@ -82,7 +81,7 @@ build/default/production/_ext/1360937237/main.o: ../src/main.c \
 
 ../src/config/default/peripheral/gpio/plib_gpio.h:
 
-../src/Para_Calculations.h:
+../../../BEPL_T/firmware/src/API/Para_Calculations.h:
 
 ../../../BEPL_T/firmware/src/API/Ampli_functions.h:
 
@@ -93,8 +92,6 @@ build/default/production/_ext/1360937237/main.o: ../src/main.c \
 ../src/System_Configuration.h:
 
 ../../../BEPL_T/firmware/src/API/LCD_functions.h:
-
-../../../BEPL_T/firmware/src/BSP/Enco_Handling.h:
 
 ../../../BEPL_T/firmware/src/Utils/Utils.h:
 

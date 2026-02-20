@@ -88,6 +88,7 @@
         <itemPath>../../../BEPL_T/firmware/src/API/Protocol.h</itemPath>
         <itemPath>../../../BEPL_T/firmware/src/API/RTC.c</itemPath>
         <itemPath>../../../BEPL_T/firmware/src/API/RTC.h</itemPath>
+        <itemPath>../../../BEPL_T/firmware/src/API/Para_Calculations.h</itemPath>
       </logicalFolder>
       <logicalFolder name="f3" displayName="BSP" projectFiles="true">
         <itemPath>../../../BEPL_T/firmware/src/BSP/Beeps.c</itemPath>
@@ -170,7 +171,6 @@
         <itemPath>../../../BEPL_T/firmware/src/Utils/Utils.h</itemPath>
       </logicalFolder>
       <itemPath>../src/main.c</itemPath>
-      <itemPath>../src/Para_Calculations.h</itemPath>
       <itemPath>../src/IO_definitions.h</itemPath>
       <itemPath>../src/System_Configuration.h</itemPath>
       <itemPath>../src/App_Globals.c</itemPath>
@@ -206,6 +206,7 @@
   <sourceRootList>
     <Elem>../src</Elem>
     <Elem>../../../BEPL_T/firmware/src/BSP</Elem>
+    <Elem>../../../BEPL_T/firmware/src/API</Elem>
   </sourceRootList>
   <projectmakefile>Makefile</projectmakefile>
   <confs>

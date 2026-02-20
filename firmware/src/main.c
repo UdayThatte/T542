@@ -31,7 +31,7 @@
 #include "IO_definitions.h"
 #include "Para_Calculations.h"
 #include "LCD_functions.h"
-#include "Enco_Handling.h"
+//#include "Enco_Handling.h"
 #include "Utils.h"
 #include "KBD_5X8_rd.h"
 #include "Events.h"

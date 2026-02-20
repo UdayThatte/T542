@@ -15,6 +15,7 @@
             <sourceRootList>
                 <sourceRootElem>../src</sourceRootElem>
                 <sourceRootElem>../../../BEPL_T/firmware/src/BSP</sourceRootElem>
+                <sourceRootElem>../../../BEPL_T/firmware/src/API</sourceRootElem>
             </sourceRootList>
             <confList>
                 <confElem>

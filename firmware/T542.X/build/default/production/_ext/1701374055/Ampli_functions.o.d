@@ -26,8 +26,8 @@ build/default/production/_ext/1701374055/Ampli_functions.o: \
  ../../../BEPL_T/firmware/src/BSP/CAN_Comm.h \
  ../src/System_Configuration.h \
  ../../../BEPL_T/firmware/src/BSP/CAN_Enco_Com.h \
- ../../../BEPL_T/firmware/src/Utils/Utils.h ../src/Para_Calculations.h \
- ../../../BEPL_T/firmware/src/API/Ampli_functions.h
+ ../../../BEPL_T/firmware/src/Utils/Utils.h \
+ ../../../BEPL_T/firmware/src/API/Para_Calculations.h
 
 ../../../BEPL_T/firmware/src/API/Ampli_functions.h:
 
@@ -83,6 +83,4 @@ build/default/production/_ext/1701374055/Ampli_functions.o: \
 
 ../../../BEPL_T/firmware/src/Utils/Utils.h:
 
-../src/Para_Calculations.h:
-
-../../../BEPL_T/firmware/src/API/Ampli_functions.h:
+../../../BEPL_T/firmware/src/API/Para_Calculations.h:

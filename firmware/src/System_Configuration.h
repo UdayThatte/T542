@@ -37,7 +37,7 @@ extern "C" {
 #define  AZ_Encode_Node CAN_Node_Encoder1
 
 
-    
+#define Max_Spin_speed  20  //+ve negative both ways    
 #define AZ_Position_Positive_Error 0.1
 #define AZ_Position_Negative_Error 0.1    
     
